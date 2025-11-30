@@ -677,3 +677,9 @@ header h1 {
   transform: scale(0.97);
   border: 2px dashed #ff1e56;
 }
+
+.manga-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+  border: 1px dashed #ff1e56;
+}

@@ -196,6 +196,8 @@ card.id = "card-" + manga.id;
 
   function renderizar() {
     let rows = aplicarFiltros([...dadosOriginais]);
+rows = aplicarOrdemSalva(rows);
+
     contadorItens.textContent = `${rows.length} itens`;
     const pag = paginar(rows);
 
@@ -207,6 +209,8 @@ card.id = "card-" + manga.id;
     main.appendChild(grid);
 
     renderPaginacao(rows.length);
+    ativarDragDrop();
+
   }
 
   formulario.addEventListener('submit', async (e) => {
@@ -375,5 +379,70 @@ function aplicarOrdemSalva() {
   });
 }
 
+
+
+// === DRAG & DROP PARA REORDENAR ===
+
+let arrastando = null;
+
+function ativarDragDrop() {
+  const cards = document.querySelectorAll(".manga-card");
+  const container = document.getElementById("main");
+
+  cards.forEach(card => {
+    card.setAttribute("draggable", "true");
+
+    card.addEventListener("dragstart", () => {
+      arrastando = card;
+      card.classList.add("dragging");
+    });
+
+    card.addEventListener("dragend", () => {
+      arrastando = null;
+      card.classList.remove("dragging");
+      salvarOrdem();
+    });
+  });
+
+  container.addEventListener("dragover", e => {
+    e.preventDefault();
+    const elementoAbaixo = pegarElementoAbaixo(container, e.clientY);
+    if (elementoAbaixo == null) {
+      container.appendChild(arrastando);
+    } else {
+      container.insertBefore(arrastando, elementoAbaixo);
+    }
+  });
+}
+
+function pegarElementoAbaixo(container, y) {
+  const cardsQueNaoEstaoSendoArrastados = [...container.querySelectorAll(".manga-card:not(.dragging)")];
+
+  return cardsQueNaoEstaoSendoArrastados.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    }
+
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function salvarOrdem() {
+  const ordem = [...document.querySelectorAll(".manga-card")].map(c => c.dataset.id);
+  localStorage.setItem("ordem_mangas", JSON.stringify(ordem));
+}
+
+function aplicarOrdemSalva(lista) {
+  const ordemSalva = JSON.parse(localStorage.getItem("ordem_mangas"));
+  if (!ordemSalva) return lista;
+
+  // Rearranja baseado na ordem salva
+  return ordemSalva
+    .map(id => lista.find(m => m.id == id))
+    .filter(Boolean); 
+}
 
 setTimeout(aplicarOrdemSalva, 300);
