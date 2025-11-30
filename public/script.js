@@ -87,6 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = document.createElement('div');
     card.className = 'manga-card';
     card.dataset.id = manga.id;
+    
+    card.draggable = true;
+card.id = "card-" + manga.id;
+
 
     const img = document.createElement('img');
     img.src = manga.imagem || '';
@@ -306,3 +310,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
   carregarDados();
 });
+
+let cardBeingDragged = null;
+
+/* Quando começa a arrastar */
+document.addEventListener("dragstart", e => {
+  if (e.target.classList.contains("manga-card")) {
+    cardBeingDragged = e.target;
+    e.target.classList.add("dragging");
+  }
+});
+
+/* Quando solta */
+document.addEventListener("dragend", e => {
+  if (e.target.classList.contains("manga-card")) {
+    e.target.classList.remove("dragging");
+    salvarOrdem();
+  }
+});
+
+/* Permitir arrastar sobre o grid */
+main.addEventListener("dragover", e => {
+  e.preventDefault();
+  const afterElement = getCardAfter(main, e.clientY);
+  if (afterElement == null) {
+    main.appendChild(cardBeingDragged);
+  } else {
+    main.insertBefore(cardBeingDragged, afterElement);
+  }
+});
+
+/* Função para pegar o card abaixo do mouse */
+function getCardAfter(container, y) {
+  const draggableElements = [...container.querySelectorAll(".manga-card:not(.dragging)")];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+
+function salvarOrdem() {
+  const ids = [...document.querySelectorAll(".manga-card")].map(c => c.dataset.id);
+  localStorage.setItem("ordem_mangas", JSON.stringify(ids));
+}
+
+
+function aplicarOrdemSalva() {
+  const ordem = JSON.parse(localStorage.getItem("ordem_mangas"));
+  if (!ordem) return;
+
+  const cards = [...document.querySelectorAll(".manga-card")];
+
+  ordem.forEach(id => {
+    const card = cards.find(c => c.dataset.id == id);
+    if (card) main.appendChild(card);
+  });
+}
+
+
+setTimeout(aplicarOrdemSalva, 300);

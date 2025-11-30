@@ -672,3 +672,8 @@ header h1 {
   background: #550015;
 }
 
+.manga-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+  border: 2px dashed #ff1e56;
+}
