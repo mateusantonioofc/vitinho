@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ordenacaoSelect = document.getElementById('ordenacao');
   const paginacaoContainer = document.getElementById('paginacao');
   const contadorItens = document.getElementById('contador');
-  const temaToggle = document.getElementById('tema-toggle');
+
 
   const API_BASE = 'https://predict-production-40f6.up.railway.app/api/biblioteca';
 
@@ -300,14 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
   filtroGenero.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
   ordenacaoSelect.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
 
-  temaToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    localStorage.setItem('tema', document.body.classList.contains('dark') ? 'dark' : 'light');
-  });
-
-  if (localStorage.getItem('tema') === 'dark') {
-    document.body.classList.add('dark');
-  }
+  
 
   recarregarBtn.addEventListener('click', () => carregarDados());
 
