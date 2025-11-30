@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let idParaDeletar = null;
   let idParaEditar = null;
-  const API_BASE = '/api/biblioteca';
+  const API_BASE = 'https://predict-production-40f6.up.railway.app/api/biblioteca';
 
 
   function openModal(modal) {

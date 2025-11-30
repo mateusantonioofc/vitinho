@@ -1,178 +1,81 @@
-
 const express = require('express');
-
 const sqlite3 = require('sqlite3').verbose();
-
 const path = require('path');
-
 const cors = require('cors');
 
-
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
-
 app.use(cors());
-
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 const db = new sqlite3.Database('./biblioteca.db', (err) => {
-
-
-  if (err) {
-    console.error('Erro ao abrir o banco de dados "biblioteca.db":', err.message);
-  } else {
-    console.log('Conectado ao banco de dados SQLite3 "biblioteca.db"');
-
-    db.run(`CREATE TABLE IF NOT EXISTS Biblioteca (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  titulo TEXT NOT NULL,
-  ano INTEGER,
-  genero TEXT,
-  autor TEXT,
-  imagem TEXT
-)`, (err) => {
-
-      if (err) {
-        console.error('Erro ao criar a tabela "Biblioteca"', err.message);
-      } else {
-        console.log('Tabela "Biblioteca" pronta!');
-      }
-    });
+  if (!err) {
+    db.run(
+      `CREATE TABLE IF NOT EXISTS Biblioteca (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        titulo TEXT NOT NULL,
+        ano INTEGER,
+        genero TEXT,
+        autor TEXT,
+        imagem TEXT
+      )`
+    );
   }
 });
 
-
-
 app.get('/api/biblioteca', (req, res) => {
-
-  const sql = 'SELECT * FROM Biblioteca';
-
-
-  db.all(sql, [], (err, rows) => {
-
-    if (err) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-
-    res.json({
-      message: 'success',
-      data: rows
-    });
+  db.all('SELECT * FROM Biblioteca', [], (err, rows) => {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ message: 'success', data: rows });
   });
 });
-
 
 app.get('/api/biblioteca/:id', (req, res) => {
-
-  const sql = 'SELECT * FROM Biblioteca WHERE id = ?';
-
-  const params = [req.params.id];
-
-
-  db.get(sql, params, (err, row) => {
-
-    if (err) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-
-    if (!row) {
-      res.status(404).json({ error: 'Item não encontrado' });
-      return;
-    }
-
-    res.json({
-      message: 'success',
-      data: row
-    });
+  db.get('SELECT * FROM Biblioteca WHERE id = ?', [req.params.id], (err, row) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Item não encontrado' });
+    res.json({ message: 'success', data: row });
   });
 });
-
 
 app.post('/api/biblioteca', (req, res) => {
   const { titulo, ano, genero, autor, imagem } = req.body;
+  if (!titulo) return res.status(400).json({ error: 'O título é obrigatório' });
 
-  if (!titulo) {
-    return res.status(400).json({ error: 'O título é obrigatório' });
-  }
-
-  const sql = `INSERT INTO Biblioteca (titulo, ano, genero, autor, imagem)
-               VALUES (?, ?, ?, ?, ?)`;
-  const params = [titulo, ano, genero, autor, imagem];
-
-  db.run(sql, params, function (err) {
-    if (err) {
-      console.error("Erro ao inserir no banco:", err.message);
-      res.status(400).json({ error: err.message });
-      return;
+  db.run(
+    `INSERT INTO Biblioteca (titulo, ano, genero, autor, imagem)
+     VALUES (?, ?, ?, ?, ?)`,
+    [titulo, ano, genero, autor, imagem],
+    function (err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ message: 'Mangá adicionado com sucesso', id: this.lastID });
     }
-
-    res.json({
-      message: 'Mangá adicionado com sucesso',
-      id: this.lastID
-    });
-  });
+  );
 });
-
 
 app.put('/api/biblioteca/:id', (req, res) => {
   const { titulo, ano, genero, autor, imagem } = req.body;
 
-  const sql = `UPDATE Biblioteca 
-               SET titulo = ?, ano = ?, genero = ?, autor = ?, imagem = ?
-               WHERE id = ?`;
-  const params = [titulo, ano, genero, autor, imagem, req.params.id];
-
-  db.run(sql, params, function (err) {
-    if (err) {
-      console.error("Erro ao atualizar no banco:", err.message);
-      res.status(400).json({ error: err.message });
-      return;
+  db.run(
+    `UPDATE Biblioteca
+     SET titulo = ?, ano = ?, genero = ?, autor = ?, imagem = ?
+     WHERE id = ?`,
+    [titulo, ano, genero, autor, imagem, req.params.id],
+    function (err) {
+      if (err) return res.status(400).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Mangá não encontrado' });
+      res.json({ message: 'Mangá atualizado com sucesso', id: req.params.id });
     }
-
-    if (this.changes === 0) {
-      res.status(404).json({ error: 'Mangá não encontrado' });
-      return;
-    }
-
-    res.json({
-      message: 'Mangá atualizado com sucesso',
-      id: req.params.id
-    });
-  });
+  );
 });
 
-
-
 app.delete('/api/biblioteca/:id', (req, res) => {
-
-  const sql = 'DELETE FROM Biblioteca WHERE id = ?';
-
-  const params = [req.params.id];
-
-
-  db.run(sql, params, function (err) {
-
-    if (err) {
-      res.status(400).json({ error: err.message });
-      return;
-    }
-
-    if (this.changes === 0) {
-      res.status(404).json({ error: 'Game not found' });
-      return;
-    }
-
-    res.json({
-      message: 'Game deleted successfully',
-      changes: this.changes
-    });
+  db.run('DELETE FROM Biblioteca WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Mangá não encontrado' });
+    res.json({ message: 'Mangá deletado com sucesso', changes: this.changes });
   });
 });
 
@@ -181,26 +84,17 @@ app.get('/', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error("Erro interno:", err.stack);
   res.status(500).json({ error: err.message || 'Erro interno do servidor' });
 });
-
-
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor executando com sucesso no endereço http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
 
 process.on('SIGINT', () => {
-  db.close((err) => {
-    if (err) {
-      console.error(err.message);
-    }
-    console.log('Conexão com o banco de dados encerrada com sucesso.');
-    process.exit(0);
-  });
+  db.close(() => process.exit(0));
 });
