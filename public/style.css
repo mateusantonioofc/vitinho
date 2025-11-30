@@ -367,9 +367,7 @@ header h1 {
       }
     }
     
-    /* ================================
-   🔍 Barra de busca / Filtros / Ordenação
-   ================================ */
+
 .toolbar-row {
   display: flex;
   gap: 0.6rem;
@@ -403,9 +401,7 @@ header h1 {
 }
 
 
-/* ================================
-   ⭐ Rating (estrelas)
-   ================================ */
+
 .rating {
   margin-top: 0.4rem;
 }
@@ -422,9 +418,7 @@ header h1 {
 }
 
 
-/* ================================
-   💀 Skeleton Loading
-   ================================ */
+
 .skeleton-card {
   width: 100%;
   height: 340px;
@@ -440,9 +434,7 @@ header h1 {
 }
 
 
-/* ================================
-   📄 Paginação
-   ================================ */
+
 .paginacao {
   display: flex;
   justify-content: center;
@@ -472,9 +464,7 @@ header h1 {
 }
 
 
-/* ================================
-   🔔 Toast notifications
-   ================================ */
+
 #toast-container {
   position: fixed;
   top: 1rem;
@@ -497,9 +487,7 @@ header h1 {
 }
 
 
-/* ================================
-   🖼 Modal de detalhes
-   ================================ */
+
 .modal-detail {
   position: fixed;
   inset: 0;
@@ -572,10 +560,6 @@ header h1 {
 }
 
 
-/* ================================
-   🌓 Tema (não muda seu visual)
-   Apenas adiciona suporte!
-   ================================ */
 .dark body {
   background: radial-gradient(circle at bottom right, #050505 20%, #0d0d0d 100%);
 }
@@ -609,3 +593,82 @@ header h1 {
   max-height: 300px; 
   border-radius: 10px;
 }
+
+.manga-card {
+  background: #1b1b1b;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(255, 30, 86, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  max-width: 330px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.manga-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(255, 30, 86, 0.55);
+}
+
+
+.manga-card img {
+  width: 100%;
+  height: clamp(220px, 30vw, 340px); 
+  object-fit: cover;
+  display: block;
+  border-bottom: 2px solid #ff1e56;
+}
+
+.manga-info {
+  padding: 1rem;
+}
+
+
+.manga-info h3 {
+  color: #ff1e56;
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+}
+
+
+.manga-info p {
+  color: #ddd;
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+}
+
+
+.card-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.8rem;
+}
+
+.btn-delete, .btn-edit {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: 0.2s;
+}
+
+.btn-edit {
+  background: #ff3b6d;
+  color: #fff;
+}
+
+.btn-edit:hover {
+  background: #ff1e56;
+}
+
+.btn-delete {
+  background: #333;
+  color: #ff1e56;
+}
+
+.btn-delete:hover {
+  background: #550015;
+}
+
