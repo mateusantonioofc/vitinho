@@ -2,41 +2,86 @@ document.addEventListener('DOMContentLoaded', () => {
   const main = document.getElementById('main');
   const formulario = document.getElementById('formulario');
   const recarregarBtn = document.getElementById('recarregar');
-
-
   const modalConfirm = document.getElementById('modal-confirm');
   const cancelarDeleteBtn = document.getElementById('cancelar-delete');
   const confirmarDeleteBtn = document.getElementById('confirmar-delete');
-
   const modalEdit = document.getElementById('modal-edit');
   const cancelarEditBtn = document.getElementById('cancelar-edit');
   const salvarEditBtn = document.getElementById('salvar-edit');
-
   const editTitulo = document.getElementById('edit-titulo');
   const editAutor = document.getElementById('edit-autor');
   const editAno = document.getElementById('edit-ano');
   const editGenero = document.getElementById('edit-genero');
   const editImagem = document.getElementById('edit-imagem');
+  const modalDetalhes = document.getElementById('modal-detalhes');
+  const fecharDetalhes = document.getElementById('fechar-detalhes');
+  const detalhesImg = document.getElementById('det-img');
+  const detalhesTitulo = document.getElementById('det-titulo');
+  const detalhesAutor = document.getElementById('det-autor');
+  const detalhesAno = document.getElementById('det-ano');
+  const detalhesGenero = document.getElementById('det-genero');
+  const detalhesRating = document.getElementById('det-rating');
+  const buscaInput = document.getElementById('busca');
+  const filtroGenero = document.getElementById('filtro-genero');
+  const ordenacaoSelect = document.getElementById('ordenacao');
+  const paginacaoContainer = document.getElementById('paginacao');
+  const contadorItens = document.getElementById('contador');
+  const temaToggle = document.getElementById('tema-toggle');
+
+  const API_BASE = 'https://predict-production-40f6.up.railway.app/api/biblioteca';
 
   let idParaDeletar = null;
   let idParaEditar = null;
-  const API_BASE = 'https://predict-production-40f6.up.railway.app/api/biblioteca';
+  let dadosOriginais = [];
+  let paginaAtual = 1;
+  let porPagina = 9;
 
+  function openModal(m) { m.classList.remove('hidden'); }
+  function closeModal(m) { m.classList.add('hidden'); }
 
-  function openModal(modal) {
-    modal.classList.remove('hidden');
-  }
-  function closeModal(modal) {
-    modal.classList.add('hidden');
-  }
-
-
-  function notify(msg, tipo = 'info') {
-
-    console.log(`[${tipo}] ${msg}`);
-
+  function toast(msg, tipo = 'info') {
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 2500);
   }
 
+  function ratingLocal(id) {
+    return Number(localStorage.getItem(`rating_${id}`)) || 0;
+  }
+
+  function salvarRating(id, r) {
+    localStorage.setItem(`rating_${id}`, r);
+  }
+
+  function criarEstrelas(id) {
+    const r = ratingLocal(id);
+    const div = document.createElement('div');
+    div.className = 'rating';
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement('span');
+      s.textContent = i <= r ? '★' : '☆';
+      s.dataset.valor = i;
+      s.addEventListener('click', () => {
+        salvarRating(id, i);
+        renderizar();
+      });
+      div.appendChild(s);
+    }
+    return div;
+  }
+
+  function criarSkeleton() {
+    const grid = document.createElement('div');
+    grid.className = 'manga-grid';
+    for (let i = 0; i < 9; i++) {
+      const s = document.createElement('div');
+      s.className = 'skeleton-card';
+      grid.appendChild(s);
+    }
+    return grid;
+  }
 
   function criarCard(manga) {
     const card = document.createElement('div');
@@ -45,10 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const img = document.createElement('img');
     img.src = manga.imagem || '';
-    img.alt = manga.titulo || 'Capa';
-    img.onerror = () => {
-      img.src = 'https://via.placeholder.com/200x280?text=Sem+Imagem';
-    };
+    img.onerror = () => img.src = 'https://via.placeholder.com/200x280?text=Sem+Imagem';
+    img.addEventListener('click', () => abrirDetalhes(manga));
 
     const info = document.createElement('div');
     info.className = 'manga-info';
@@ -64,6 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const genero = document.createElement('p');
     genero.innerHTML = `<strong>Gênero:</strong> ${manga.genero || '-'}`;
+
+    const rating = criarEstrelas(manga.id);
 
     const btns = document.createElement('div');
     btns.className = 'card-buttons';
@@ -85,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     info.appendChild(autor);
     info.appendChild(ano);
     info.appendChild(genero);
+    info.appendChild(rating);
     info.appendChild(btns);
 
     card.appendChild(img);
@@ -93,36 +139,71 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   }
 
-  
-  async function carregarMangases() {
-    main.innerHTML = '<p>Carregando ainda bixin acalme-se</p>';
+  async function carregarDados() {
+    main.innerHTML = '';
+    main.appendChild(criarSkeleton());
     try {
       const res = await fetch(API_BASE);
-      if (!res.ok) throw new Error(`Erro ao carregar: ${res.status}`);
       const data = await res.json();
-      const rows = data.data || [];
-      main.innerHTML = '';
-
-      if (rows.length === 0) {
-        main.innerHTML = '<p>Nenhum mangá cadastrad</p>';
-        return;
-      }
-
-      const grid = document.createElement('div');
-      grid.className = 'manga-grid';
-
-      rows.forEach(manga => {
-        const card = criarCard(manga);
-        grid.appendChild(card);
-      });
-
-      main.appendChild(grid);
-    } catch (err) {
-      console.error(err);
-      main.innerHTML = `<p>Erro ao carregar dados: ${err.message}</p>`;
+      dadosOriginais = data.data || [];
+      paginaAtual = 1;
+      renderizar();
+    } catch (e) {
+      main.innerHTML = '<p>Erro ao carregar dados</p>';
     }
   }
 
+  function aplicarFiltros(rows) {
+    const busca = buscaInput.value.toLowerCase();
+    if (busca) {
+      rows = rows.filter(m => m.titulo.toLowerCase().includes(busca) || (m.autor || '').toLowerCase().includes(busca));
+    }
+    const gen = filtroGenero.value;
+    if (gen !== 'todos') rows = rows.filter(m => m.genero === gen);
+    const ord = ordenacaoSelect.value;
+    if (ord === 'az') rows.sort((a, b) => a.titulo.localeCompare(b.titulo));
+    if (ord === 'za') rows.sort((a, b) => b.titulo.localeCompare(a.titulo));
+    if (ord === 'ano_up') rows.sort((a, b) => (a.ano || 0) - (b.ano || 0));
+    if (ord === 'ano_down') rows.sort((a, b) => (b.ano || 0) - (a.ano || 0));
+    return rows;
+  }
+
+  function paginar(rows) {
+    const inicio = (paginaAtual - 1) * porPagina;
+    return rows.slice(inicio, inicio + porPagina);
+  }
+
+  function renderPaginacao(total) {
+    paginacaoContainer.innerHTML = '';
+    const totalPaginas = Math.ceil(total / porPagina);
+    if (totalPaginas <= 1) return;
+
+    for (let i = 1; i <= totalPaginas; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      if (i === paginaAtual) btn.classList.add('ativo');
+      btn.addEventListener('click', () => {
+        paginaAtual = i;
+        renderizar();
+      });
+      paginacaoContainer.appendChild(btn);
+    }
+  }
+
+  function renderizar() {
+    let rows = aplicarFiltros([...dadosOriginais]);
+    contadorItens.textContent = `${rows.length} itens`;
+    const pag = paginar(rows);
+
+    main.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'manga-grid';
+
+    pag.forEach(m => grid.appendChild(criarCard(m)));
+    main.appendChild(grid);
+
+    renderPaginacao(rows.length);
+  }
 
   formulario.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -132,123 +213,103 @@ document.addEventListener('DOMContentLoaded', () => {
     const genero = document.getElementById('input-genero').value.trim();
     const imagem = document.getElementById('input-img').value.trim();
 
-    if (!titulo) {
-      notify('Título é obrigatório', 'error');
-      return;
-    }
-
     const payload = { titulo, autor, ano: ano ? Number(ano) : null, genero, imagem };
 
     try {
-      const res = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch(API_BASE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || JSON.stringify(json));
-      }
-      notify('Mangá adicionado com sucesso', 'success');
+      toast('Mangá adicionado', 'success');
       formulario.reset();
-      carregarMangases();
+      carregarDados();
     } catch (err) {
-      console.error(err);
-      notify(`Erro ao adicionar: ${err.message}`, 'error');
+      toast('Erro ao adicionar', 'error');
     }
   });
 
-  
   function abrirModalDeletar(id) {
     idParaDeletar = id;
     openModal(modalConfirm);
   }
 
   confirmarDeleteBtn.addEventListener('click', async () => {
-    if (!idParaDeletar) return;
     try {
-      const res = await fetch(`${API_BASE}/${idParaDeletar}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || JSON.stringify(json));
-      notify('Mangá excluído', 'success');
-      idParaDeletar = null;
+      await fetch(`${API_BASE}/${idParaDeletar}`, { method: 'DELETE' });
       closeModal(modalConfirm);
-      carregarMangases();
-    } catch (err) {
-      console.error(err);
-      notify(`Erro ao excluir: ${err.message}`, 'error');
+      carregarDados();
+      toast('Excluído', 'success');
+    } catch {
+      toast('Erro ao excluir', 'error');
     }
   });
 
-  cancelarDeleteBtn.addEventListener('click', () => {
-    idParaDeletar = null;
-    closeModal(modalConfirm);
-  });
+  cancelarDeleteBtn.addEventListener('click', () => closeModal(modalConfirm));
 
-  
   async function abrirModalEditar(id) {
     idParaEditar = id;
-    try {
-      const res = await fetch(`${API_BASE}/${id}`);
-      if (!res.ok) throw new Error('Não foi possível buscar o mangá');
-      const json = await res.json();
-      const m = json.data;
-      editTitulo.value = m.titulo || '';
-      editAutor.value = m.autor || '';
-      editAno.value = m.ano || '';
-      editGenero.value = m.genero || '';
-      editImagem.value = m.imagem || '';
-      openModal(modalEdit);
-    } catch (err) {
-      console.error(err);
-      notify(`Erro ao abrir edição: ${err.message}`, 'error');
-    }
+    const res = await fetch(`${API_BASE}/${id}`);
+    const json = await res.json();
+    const m = json.data;
+
+    editTitulo.value = m.titulo;
+    editAutor.value = m.autor;
+    editAno.value = m.ano;
+    editGenero.value = m.genero;
+    editImagem.value = m.imagem;
+
+    openModal(modalEdit);
   }
 
-  cancelarEditBtn.addEventListener('click', () => {
-    idParaEditar = null;
-    closeModal(modalEdit);
-  });
+  cancelarEditBtn.addEventListener('click', () => closeModal(modalEdit));
 
-  
   salvarEditBtn.addEventListener('click', async () => {
-    if (!idParaEditar) return;
     const titulo = editTitulo.value.trim();
     const autor = editAutor.value.trim();
     const ano = editAno.value.trim();
     const genero = editGenero.value.trim();
     const imagem = editImagem.value.trim();
 
-    if (!titulo) {
-      notify('Título é obrigatório', 'error');
-      return;
-    }
-
     const payload = { titulo, autor, ano: ano ? Number(ano) : null, genero, imagem };
 
     try {
-      const res = await fetch(`${API_BASE}/${idParaEditar}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || JSON.stringify(json));
-      notify('Mangá atualizado', 'success');
-      idParaEditar = null;
+      await fetch(`${API_BASE}/${idParaEditar}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       closeModal(modalEdit);
-      carregarMangases();
-    } catch (err) {
-      console.error(err);
-      notify(`Erro ao atualizar: ${err.message}`, 'error');
+      carregarDados();
+      toast('Atualizado', 'success');
+    } catch {
+      toast('Erro ao atualizar', 'error');
     }
   });
 
-  
-  recarregarBtn.addEventListener('click', () => {
-    carregarMangases();
+  function abrirDetalhes(m) {
+    detalhesImg.src = m.imagem || 'https://via.placeholder.com/300x400?text=Sem+Imagem';
+    detalhesTitulo.textContent = m.titulo;
+    detalhesAutor.textContent = m.autor;
+    detalhesAno.textContent = m.ano;
+    detalhesGenero.textContent = m.genero;
+
+    detalhesRating.innerHTML = '';
+    const r = criarEstrelas(m.id);
+    detalhesRating.appendChild(r);
+
+    openModal(modalDetalhes);
+  }
+
+  fecharDetalhes.addEventListener('click', () => closeModal(modalDetalhes));
+
+  buscaInput.addEventListener('input', () => { paginaAtual = 1; renderizar(); });
+  filtroGenero.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
+  ordenacaoSelect.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
+
+  temaToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('tema', document.body.classList.contains('dark') ? 'dark' : 'light');
   });
 
+  if (localStorage.getItem('tema') === 'dark') {
+    document.body.classList.add('dark');
+  }
 
-  carregarMangases();
+  recarregarBtn.addEventListener('click', () => carregarDados());
+
+  carregarDados();
 });

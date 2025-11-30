@@ -1,86 +1,122 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>Meus Mangás</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-extra.css">
+  <title>Meus Mangás</title>
 </head>
-
 <body>
-    <header>
+  <header>
+    <div class="header-top">
+      <div class="header-texts">
         <h1>My Manga Collection</h1>
         <h2>Galeria dos meus mangás favoritos</h2>
-        <button id="recarregar">Reload</button>
-        
-    </header>
-
-    <div id="main">
-
+      </div>
+      <div class="header-actions">
+        <button id="tema-toggle" class="btn-small">Tema</button>
+        <button id="recarregar" class="btn-small">Reload</button>
+      </div>
     </div>
 
-    <form id="formulario">
-        <h3>Adicionar Novo Mangá</h3>
-        <label for="input-titulo">Título</label>
-        <input type="text" id="input-titulo" name="input-titulo" placeholder="Ex: Chainsaw Man" required>
+    <div class="toolbar-row">
+      <input id="busca" type="search" placeholder="Buscar por título ou autor (Ctrl/Cmd + K)" aria-label="Buscar"/>
+      <select id="filtro-genero" aria-label="Filtrar por gênero">
+        <option value="todos">Todos os gêneros</option>
+      </select>
+      <select id="ordenacao" aria-label="Ordenar">
+        <option value="">Ordenar</option>
+        <option value="az">Título A → Z</option>
+        <option value="za">Título Z → A</option>
+        <option value="ano_up">Ano ↑</option>
+        <option value="ano_down">Ano ↓</option>
+      </select>
+      <div id="contador" class="contador-itens">—</div>
+    </div>
+  </header>
 
-        <label for="input-autor">Autor</label>
-        <input type="text" id="input-autor" name="input-autor" placeholder="Ex: Tatsuki Fujimoto" required>
+  <main>
+    <div id="main" class="content-grid"></div>
+    <div id="paginacao" class="paginacao"></div>
+  </main>
 
-        <label for="input-ano">Ano</label>
-        <input type="number" id="input-ano" name="input-ano" placeholder="Ex: 2018" required>
+  <form id="formulario" class="form-adicionar" aria-label="Adicionar mangá">
+    <h3>Adicionar Novo Mangá</h3>
 
-        <label for="input-genero">Gênero</label>
-        <input type="text" id="input-genero" name="input-genero" placeholder="Ex: Ação / Terror" required>
-        
-            <label for="input-img">URL da Imagem</label>
+    <label for="input-titulo">Título</label>
+    <input type="text" id="input-titulo" name="input-titulo" placeholder="Ex: Chainsaw Man" required>
+
+    <label for="input-autor">Autor</label>
+    <input type="text" id="input-autor" name="input-autor" placeholder="Ex: Tatsuki Fujimoto" required>
+
+    <label for="input-ano">Ano</label>
+    <input type="number" id="input-ano" name="input-ano" placeholder="Ex: 2018" required>
+
+    <label for="input-genero">Gênero</label>
+    <input type="text" id="input-genero" name="input-genero" placeholder="Ex: Ação / Terror" required>
+
+    <label for="input-img">URL da Imagem</label>
     <input type="url" id="input-img" placeholder="https://exemplo.com/capa.jpg" required>
 
-        <button type="submit">Adicionar Mangá</button>
-    </form>
+    <button type="submit" class="btn-primary">Adicionar Mangá</button>
+  </form>
 
-<div id="modal-confirm" class="modal hidden">
+  <div id="modal-confirm" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-box">
       <h3>Excluir Mangá?</h3>
       <p>Tem certeza que deseja apagar este mangá?</p>
-  
       <div class="modal-btns">
         <button id="cancelar-delete" class="btn-cancel">Cancelar</button>
         <button id="confirmar-delete" class="btn-confirm">Excluir</button>
       </div>
     </div>
   </div>
-  
 
-<div id="modal-edit" class="modal hidden">
+  <div id="modal-edit" class="modal hidden" role="dialog" aria-modal="true">
     <div class="modal-box">
       <h3>Editar Mangá</h3>
-  
+
       <label>Título</label>
       <input type="text" id="edit-titulo">
-  
+
       <label>Autor</label>
       <input type="text" id="edit-autor">
-  
+
       <label>Ano</label>
       <input type="number" id="edit-ano">
-  
+
       <label>Gênero</label>
       <input type="text" id="edit-genero">
-  
+
       <label>Imagem (URL)</label>
       <input type="url" id="edit-imagem">
-  
+
       <div class="modal-btns">
         <button id="cancelar-edit" class="btn-cancel">Cancelar</button>
         <button id="salvar-edit" class="btn-confirm">Salvar</button>
       </div>
     </div>
   </div>
-  
 
+  <div id="modal-detalhes" class="modal-detail hidden" role="dialog" aria-modal="true">
+    <div class="detail-inner">
+      <button id="fechar-detalhes" class="btn-close">✕</button>
+      <div class="detail-body">
+        <img id="det-img" src="" alt="Capa do mangá">
+        <div class="detail-meta">
+          <h2 id="det-titulo"></h2>
+          <p><strong>Autor:</strong> <span id="det-autor"></span></p>
+          <p><strong>Ano:</strong> <span id="det-ano"></span></p>
+          <p><strong>Gênero:</strong> <span id="det-genero"></span></p>
+          <div id="det-rating"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="script.js"></script>
 </body>
-<script src="script.js"></script>
-
 </html>
