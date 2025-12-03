@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const paginacaoContainer = document.getElementById('paginacao');
   const contadorItens = document.getElementById('contador');
 
-
   const API_BASE = 'https://predict-production-40f6.up.railway.app/api/biblioteca';
 
   let idParaDeletar = null;
@@ -87,10 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = document.createElement('div');
     card.className = 'manga-card';
     card.dataset.id = manga.id;
-    
     card.draggable = true;
-card.id = "card-" + manga.id;
-
 
     const img = document.createElement('img');
     img.src = manga.imagem || '';
@@ -172,6 +168,19 @@ card.id = "card-" + manga.id;
     return rows;
   }
 
+  function aplicarOrdemSalva(lista) {
+    const ordemSalva = JSON.parse(localStorage.getItem("ordem_mangas"));
+    if (!ordemSalva) return lista;
+
+    const ordenados = ordemSalva
+      .map(id => lista.find(m => m.id == id))
+      .filter(Boolean);
+
+    const novos = lista.filter(m => !ordemSalva.includes(String(m.id)));
+
+    return [...ordenados, ...novos];
+  }
+
   function paginar(rows) {
     const inicio = (paginaAtual - 1) * porPagina;
     return rows.slice(inicio, inicio + porPagina);
@@ -196,7 +205,7 @@ card.id = "card-" + manga.id;
 
   function renderizar() {
     let rows = aplicarFiltros([...dadosOriginais]);
-rows = aplicarOrdemSalva(rows);
+    rows = aplicarOrdemSalva(rows);
 
     contadorItens.textContent = `${rows.length} itens`;
     const pag = paginar(rows);
@@ -210,7 +219,6 @@ rows = aplicarOrdemSalva(rows);
 
     renderPaginacao(rows.length);
     ativarDragDrop();
-
   }
 
   formulario.addEventListener('submit', async (e) => {
@@ -224,8 +232,7 @@ rows = aplicarOrdemSalva(rows);
     const payload = { titulo, autor, ano: ano ? Number(ano) : null, genero, imagem };
 
     try {
-      const res = await fetch(API_BASE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      const json = await res.json();
+      await fetch(API_BASE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       toast('Mangá adicionado', 'success');
       formulario.reset();
       carregarDados();
@@ -296,8 +303,7 @@ rows = aplicarOrdemSalva(rows);
     detalhesGenero.textContent = m.genero;
 
     detalhesRating.innerHTML = '';
-    const r = criarEstrelas(m.id);
-    detalhesRating.appendChild(r);
+    detalhesRating.appendChild(criarEstrelas(m.id));
 
     openModal(modalDetalhes);
   }
@@ -308,86 +314,17 @@ rows = aplicarOrdemSalva(rows);
   filtroGenero.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
   ordenacaoSelect.addEventListener('change', () => { paginaAtual = 1; renderizar(); });
 
-  
-
   recarregarBtn.addEventListener('click', () => carregarDados());
 
   carregarDados();
 });
 
-let cardBeingDragged = null;
-
-/* Quando começa a arrastar */
-document.addEventListener("dragstart", e => {
-  if (e.target.classList.contains("manga-card")) {
-    cardBeingDragged = e.target;
-    e.target.classList.add("dragging");
-  }
-});
-
-/* Quando solta */
-document.addEventListener("dragend", e => {
-  if (e.target.classList.contains("manga-card")) {
-    e.target.classList.remove("dragging");
-    salvarOrdem();
-  }
-});
-
-/* Permitir arrastar sobre o grid */
-main.addEventListener("dragover", e => {
-  e.preventDefault();
-  const afterElement = getCardAfter(main, e.clientY);
-  if (afterElement == null) {
-    main.appendChild(cardBeingDragged);
-  } else {
-    main.insertBefore(cardBeingDragged, afterElement);
-  }
-});
-
-/* Função para pegar o card abaixo do mouse */
-function getCardAfter(container, y) {
-  const draggableElements = [...container.querySelectorAll(".manga-card:not(.dragging)")];
-
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-
-    if (offset < 0 && offset > closest.offset) {
-      return { offset, element: child };
-    } else {
-      return closest;
-    }
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-
-function salvarOrdem() {
-  const ids = [...document.querySelectorAll(".manga-card")].map(c => c.dataset.id);
-  localStorage.setItem("ordem_mangas", JSON.stringify(ids));
-}
-
-
-function aplicarOrdemSalva() {
-  const ordem = JSON.parse(localStorage.getItem("ordem_mangas"));
-  if (!ordem) return;
-
-  const cards = [...document.querySelectorAll(".manga-card")];
-
-  ordem.forEach(id => {
-    const card = cards.find(c => c.dataset.id == id);
-    if (card) main.appendChild(card);
-  });
-}
-
-
-
-// === DRAG & DROP PARA REORDENAR ===
-
-let arrastando = null;
+/* DRAG & DROP */
 
 function ativarDragDrop() {
   const cards = document.querySelectorAll(".manga-card");
   const container = document.getElementById("main");
+  let arrastando = null;
 
   cards.forEach(card => {
     card.setAttribute("draggable", "true");
@@ -416,9 +353,9 @@ function ativarDragDrop() {
 }
 
 function pegarElementoAbaixo(container, y) {
-  const cardsQueNaoEstaoSendoArrastados = [...container.querySelectorAll(".manga-card:not(.dragging)")];
+  const cards = [...container.querySelectorAll(".manga-card:not(.dragging)")];
 
-  return cardsQueNaoEstaoSendoArrastados.reduce((closest, child) => {
+  return cards.reduce((closest, child) => {
     const box = child.getBoundingClientRect();
     const offset = y - box.top - box.height / 2;
 
@@ -434,15 +371,3 @@ function salvarOrdem() {
   const ordem = [...document.querySelectorAll(".manga-card")].map(c => c.dataset.id);
   localStorage.setItem("ordem_mangas", JSON.stringify(ordem));
 }
-
-function aplicarOrdemSalva(lista) {
-  const ordemSalva = JSON.parse(localStorage.getItem("ordem_mangas"));
-  if (!ordemSalva) return lista;
-
-  // Rearranja baseado na ordem salva
-  return ordemSalva
-    .map(id => lista.find(m => m.id == id))
-    .filter(Boolean); 
-}
-
-setTimeout(aplicarOrdemSalva, 300);
